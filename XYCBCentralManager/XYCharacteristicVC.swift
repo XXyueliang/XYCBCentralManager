@@ -24,10 +24,14 @@ class XYCharacteristicVC: UIViewController {
                 guard  let data = backStr.hexadecimal() else {
                     return
                 }
-                printXY(self.peripheral?.maximumWriteValueLength(for: .withResponse), obj: self, line: #line)
-                printXY(self.peripheral?.maximumWriteValueLength(for: .withoutResponse), obj: self, line: #line)
-                self.peripheral?.writeValue(data, for: self.characteristic!, type: .withResponse)
+//                printXY(self.peripheral?.maximumWriteValueLength(for: .withResponse), obj: self, line: #line)
+//                printXY(self.peripheral?.maximumWriteValueLength(for: .withoutResponse), obj: self, line: #line)
                 printXY("写", obj: self, line: #line)
+//                self.peripheral?.writeValue(data, for: self.characteristic!, type: .withResponse)
+                XYCentralManager.shared.write(peripheral: self.peripheral!, characteristic: self.characteristic!, data: data) { (error) in
+                    printXY(error, obj: self, line: #line)
+                }
+               
             }
             navigationController?.pushViewController(vc, animated: true)
         }
@@ -39,10 +43,10 @@ class XYCharacteristicVC: UIViewController {
                 guard  let data = backStr.hexadecimal() else {
                     return
                 }
-                printXY(self.peripheral?.canSendWriteWithoutResponse, obj: self, line: #line)
-                printXY("写无回复", obj: self, line: #line)
-                self.peripheral?.writeValue(data, for: self.characteristic!, type: .withoutResponse)
-
+//                printXY(self.peripheral?.canSendWriteWithoutResponse, obj: self, line: #line)
+//                printXY("写无回复", obj: self, line: #line)
+//                self.peripheral?.writeValue(data, for: self.characteristic!, type: .withoutResponse)
+                XYCentralManager.shared.writeWithoutResponse(peripheral: self.peripheral!, characteristic: self.characteristic!, data: data)
             }
             navigationController?.pushViewController(vc, animated: true)
         }

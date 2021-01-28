@@ -77,9 +77,14 @@ class XYCBBase: NSObject {
         xyCentralManager.cancelPeripheralConnection(peripheral)
     }
     
+    var writeErrorClosure: ErrorClosure?
+    func write(peripheral: CBPeripheral, characteristic: CBCharacteristic, data: Data, errorClosure: ErrorClosure?){
+        self.writeErrorClosure = errorClosure
+        peripheral.writeValue(data, for: characteristic, type: .withResponse)
+    }
+    
     var notifyErrorClosure: ErrorClosure?
     var notifyClosure: DataClosure?
-    
     //参数errorClosure:当errorClosure传回的参数为nil时表示订阅成功，否则Error参数会传回订阅失败的原因
     //参数notifyClosure: notifyClosure的参数会传回收到的数据Data,当收到通知时notifyClosure会被调用
     func subscribeNotify(peripheral: CBPeripheral, characteristic: CBCharacteristic, errorClosure: ErrorClosure?, notifyClosure: @escaping DataClosure){
@@ -87,7 +92,6 @@ class XYCBBase: NSObject {
         self.notifyErrorClosure = errorClosure
         //characteristic的value变化时会收到通知
         peripheral.setNotifyValue(true, for: characteristic)
-        
     }
     
     var readCallBack: DataClosure?
@@ -97,6 +101,9 @@ class XYCBBase: NSObject {
         peripheral.readValue(for: characteristic)
     }
 
+    func writeWithoutResponse(peripheral: CBPeripheral, characteristic: CBCharacteristic, data: Data){
+        peripheral.writeValue(data, for: characteristic, type: .withoutResponse)
+    }
 }
 
 extension XYCBBase: CBCentralManagerDelegate {
@@ -179,9 +186,13 @@ extension XYCBBase: CBPeripheralDelegate {
         }
     }
     
+    
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         print(#function)
         print(error)
+        if let closure = self.writeErrorClosure {
+            closure(error)
+        }
     }
     
     func peripheralDidUpdateRSSI(_ peripheral: CBPeripheral, error: Error?) {
@@ -244,8 +255,8 @@ extension CBCharacteristic {
         if self.properties.contains(.writeWithoutResponse) {
             str += "/写无回复"
         }
-        print(properties.rawValue)
-        print(self.uuid.uuidString)
+//        print(properties.rawValue)
+//        print(self.uuid.uuidString)
         return str
     }
 }
