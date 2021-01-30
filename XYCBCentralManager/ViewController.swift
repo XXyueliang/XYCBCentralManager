@@ -65,7 +65,7 @@ extension ViewController: UITableViewDelegate {
         let peripheral: CBPeripheral = scanInfoArr[indexPath.row].peripheral
         XYCentralManager.shared.connect(peripheral: peripheral) { (isConnect, error) in
             if(isConnect){
-                printXY("连接成功", obj: self, line: #line)
+//                printXY("连接成功", obj: self, line: #line)
                 let vc: XYPeripheralInfoVC = XYHelper.getViewController(storyboardStr: nil, viewController: "XYPeripheralInfoVC") as! XYPeripheralInfoVC
                 vc.scanInfo = self.scanInfoArr[indexPath.row]
                 self.navigationController?.pushViewController(vc, animated: true)

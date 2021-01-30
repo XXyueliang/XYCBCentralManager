@@ -40,12 +40,10 @@ class XYCBBase: NSObject {
         xyCentralManager.delegate = self
         
     }
-    
     var xyCentralManager: CBCentralManager = CBCentralManager()
     var scanInfoArr = NSMutableArray()
     //蓝牙是否可以
     var managerStateIsOn = false
-    
     typealias FindPeripheral = (CBPeripheral) -> Void
     var findPeripheralClosure: FindPeripheral = {_ in }
     //MARK: 第一步: 搜索外设
@@ -54,7 +52,6 @@ class XYCBBase: NSObject {
        findPeripheralClosure = findPeripheral
        xyCentralManager.scanForPeripherals(withServices: nil, options: nil)
         managerStateIsOn = xyCentralManager.state != CBManagerState.poweredOn ? false : true
-        
     }
     
     func stopScan() {
@@ -77,14 +74,95 @@ class XYCBBase: NSObject {
         xyCentralManager.cancelPeripheralConnection(peripheral)
     }
     
+    //maximum transmission unit: 最大传输单元
+    private var privateMtu = 0
+    var mtu: Int {
+        set {
+            if newValue > 0 {
+                privateMtu = newValue
+            }
+        }
+        get {
+            privateMtu
+        }
+    }
     var writeErrorClosure: ErrorClosure?
+    //MARK: 写write
     func write(peripheral: CBPeripheral, characteristic: CBCharacteristic, data: Data, errorClosure: ErrorClosure?){
         self.writeErrorClosure = errorClosure
-        peripheral.writeValue(data, for: characteristic, type: .withResponse)
+        printXY(peripheral.maximumWriteValueLength(for: .withResponse), obj: self, line: #line)
+        printXY("发:\(NSData(data: data))", obj: self, line: #line)
+        let bytes = [UInt8](data)
+        var send:[UInt8] = [];
+        let mode:Int = peripheral.maximumWriteValueLength(for: .withResponse)
+        if bytes.count > mode {
+            var i:Int = 1;
+            let total = bytes.count/mode+1;
+            while i<=total {
+                if i==total{
+                    if (i-1)*mode <= bytes.count-1 {
+                        send = Array(bytes[(i-1)*mode...(bytes.count-1)]);
+                    }else{
+                        break
+                    }
+                }else{
+                    send = Array(bytes[(i-1)*mode...(mode*i-1)]);
+                }
+               
+                let data:Data = Data.init(send);
+                let nsdata:NSData = NSData.init(bytes: send, length: send.count);
+                peripheral.writeValue(data, for: characteristic, type: .withResponse)
+                print("分包发:\(nsdata)");
+                //两包数据间间隔0.1毫秒
+                Thread.sleep(forTimeInterval: 0.0001)
+                i+=1;
+            }
+        }else {
+            peripheral.writeValue(data, for: characteristic, type: .withResponse)
+        }
+    }
+    
+    //MARK: 写无回复writeWithoutResponse
+    func writeWithoutResponse(peripheral: CBPeripheral, characteristic: CBCharacteristic, data: Data){
+//        printXY(peripheral.maximumWriteValueLength(for: .withoutResponse), obj: self, line: #line)
+//        printXY(peripheral.canSendWriteWithoutResponse, obj: self, line: #line)
+        printXY("发:\(NSData(data: data))", obj: self, line: #line)
+//        printXY(peripheral.canSendWriteWithoutResponse, obj: self, line: #line)
+        let bytes = [UInt8](data)
+        var send:[UInt8] = [];
+        let mode:Int = peripheral.maximumWriteValueLength(for: .withoutResponse)
+        if bytes.count > mode {
+            var i:Int = 1;
+            let total = bytes.count/mode+1;
+            while i<=total {
+                if i==total{
+                    if (i-1)*mode <= bytes.count-1 {
+                        send = Array(bytes[(i-1)*mode...(bytes.count-1)]);
+                    } else {
+                        break
+                    }
+                }else{
+                    send = Array(bytes[(i-1)*mode...(mode*i-1)]);
+                }
+               
+                let data:Data = Data.init(send);
+                let nsdata:NSData = NSData.init(bytes: send, length: send.count);
+                peripheral.writeValue(data, for: characteristic, type: .withoutResponse)
+//                printXY(peripheral.canSendWriteWithoutResponse, obj: self, line: #line)
+                printXY("分包发:\(nsdata)", obj: self, line: #line)
+//                printXY(peripheral.canSendWriteWithoutResponse, obj: self, line: #line)
+                //两包数据间间隔0.1毫秒
+                Thread.sleep(forTimeInterval: 0.0001)
+                i+=1;
+            }
+    }else {
+        peripheral.writeValue(data, for: characteristic, type: .withoutResponse)
+    }
     }
     
     var notifyErrorClosure: ErrorClosure?
     var notifyClosure: DataClosure?
+    //MARK: 通知notify
     //参数errorClosure:当errorClosure传回的参数为nil时表示订阅成功，否则Error参数会传回订阅失败的原因
     //参数notifyClosure: notifyClosure的参数会传回收到的数据Data,当收到通知时notifyClosure会被调用
     func subscribeNotify(peripheral: CBPeripheral, characteristic: CBCharacteristic, errorClosure: ErrorClosure?, notifyClosure: @escaping DataClosure){
@@ -95,14 +173,11 @@ class XYCBBase: NSObject {
     }
     
     var readCallBack: DataClosure?
+    //MARK: 读read
     //callBack会传回read到的数据
     func read(peripheral: CBPeripheral, characteristic: CBCharacteristic, callBack: @escaping DataClosure){
         readCallBack = callBack
         peripheral.readValue(for: characteristic)
-    }
-
-    func writeWithoutResponse(peripheral: CBPeripheral, characteristic: CBCharacteristic, data: Data){
-        peripheral.writeValue(data, for: characteristic, type: .withoutResponse)
     }
 }
 
@@ -137,16 +212,16 @@ extension XYCBBase: CBCentralManagerDelegate {
         }
         connect(peripheral: peripheral) { (bool, error) in
             if bool {
-                printXY("重连成功", obj: self, line: #line)
+//                printXY("重连成功", obj: self, line: #line)
             }else {
-                print(error)
+                printXY(error, obj: self, line: #line)
             }
         }
     }
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         //MARK: 第二步: 连接外设成功
-        printXY(#function, obj: self, line: #line)
+//        printXY(#function, obj: self, line: #line)
         //MARK: 第三步: 搜索外设的服务
         peripheral.delegate = self
         //必须要搜索服务，搜到后peripheral.sevices数组中才会有值，否则是空的，搜到一个服务，才会多一个服务
@@ -189,7 +264,6 @@ extension XYCBBase: CBPeripheralDelegate {
     
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         print(#function)
-        print(error)
         if let closure = self.writeErrorClosure {
             closure(error)
         }
@@ -207,7 +281,6 @@ extension XYCBBase: CBPeripheralDelegate {
     //setNotifyValue
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         print(#function)
-        print(characteristic)
         if characteristic.isNotifying {
             if let closure = self.notifyClosure {
                 closure(characteristic.value,error)
@@ -233,8 +306,8 @@ extension XYCBBase: CBPeripheralDelegate {
     }
     
     func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
-        print(peripheral.canSendWriteWithoutResponse)
-        print(#function)
+        printXY(#function, obj: self, line: #line)
+        printXY(peripheral.canSendWriteWithoutResponse, obj: self, line: #line)
     }
     
     
@@ -255,8 +328,6 @@ extension CBCharacteristic {
         if self.properties.contains(.writeWithoutResponse) {
             str += "/写无回复"
         }
-//        print(properties.rawValue)
-//        print(self.uuid.uuidString)
         return str
     }
 }

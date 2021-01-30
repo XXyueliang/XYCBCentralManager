@@ -45,10 +45,29 @@ class XYCentralManager: NSObject {
         XYCBBase.shared.disConnect(peripheral)
     }
     
+    //MARK: mtu: 最大传输单元
+    //maximum transmission unit
+    //一包数据最多发多少个字节，如果超过mtu,框架会做自动分包发送的处理。
+    //默认设置为peripheral.maximumWriteValueLength，正常情况下mtu是不需要手动设置的，框架已经给你处理好了
+    //除非是外设的蓝牙模块不规范，mtu设为peripheral.maximumWriteValueLength时，发大一点的数据出现问题才需要手动设置
+    var mtu: Int {
+        set {
+            XYCBBase.shared.mtu = newValue
+        }
+        get {
+            XYCBBase.shared.mtu
+        }
+    }
+    
     //MARK: 写
     //errorClosure:如果传回nil说明数据写成功，否则会传回错误的原因
     func write(peripheral: CBPeripheral, characteristic: CBCharacteristic, data: Data, errorClosure: ErrorClosure?){
         XYCBBase.shared.write(peripheral: peripheral, characteristic: characteristic, data: data, errorClosure: errorClosure)
+    }
+    
+    //MARK: 写无回复
+    func writeWithoutResponse(peripheral: CBPeripheral, characteristic: CBCharacteristic, data: Data){
+        XYCBBase.shared.writeWithoutResponse(peripheral: peripheral, characteristic: characteristic, data: data)
     }
 
     //MARK: 订阅通知
@@ -64,10 +83,7 @@ class XYCentralManager: NSObject {
         XYCBBase.shared.read(peripheral: peripheral, characteristic: characteristic, callBack: callBack)
     }
     
-    //MARK: 写无回复
-    func writeWithoutResponse(peripheral: CBPeripheral, characteristic: CBCharacteristic, data: Data){
-        XYCBBase.shared.writeWithoutResponse(peripheral: peripheral, characteristic: characteristic, data: data)
-    }
+
 
 
 }

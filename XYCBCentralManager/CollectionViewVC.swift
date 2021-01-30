@@ -104,7 +104,7 @@ extension CollectionViewVC: UICollectionViewDataSource,UICollectionViewDelegate 
 
 extension CollectionViewVC: UITextViewDelegate {
     func textViewDidChange(_ textView: UITextView) {
-        print(#function)
+//        print(#function)
         if textView.text.count > 0 {
             placeholderLabel.isHidden = true
         }else {
